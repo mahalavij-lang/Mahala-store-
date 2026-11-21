@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MAHALA STORE</title>
+<style>
+:root{--green:#176b32;--light:#eef7ef;--red:#c62828;--gold:#ffb300}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:var(--light);color:#222}
+header{background:var(--green);color:white;text-align:center;padding:16px}
+nav{position:sticky;top:0;background:#125326;padding:8px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap;z-index:3}
+button,.btn{border:0;border-radius:8px;padding:10px 13px;background:var(--green);color:white;font-size:14px;cursor:pointer}
+nav button{background:white;color:var(--green);font-weight:bold}
+button.red{background:var(--red)}button.gold{background:var(--gold);color:#222}
+main{max-width:900px;margin:auto;padding:12px}.panel{background:white;padding:14px;margin:12px 0;border-radius:12px;box-shadow:0 2px 7px #0001}
+h2{color:var(--green);margin-top:5px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px}
+.product{border:1px solid #ddd;border-radius:10px;padding:10px;text-align:center}.product img{width:100%;height:110px;object-fit:contain;background:#f7f7f7;border-radius:7px}
+input,select,textarea{width:100%;padding:11px;margin:6px 0;border:1px solid #bbb;border-radius:7px;font-size:15px}
+label{font-size:14px;font-weight:bold}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row>*{flex:1}
+.small{font-size:12px;color:#555}.muted{color:#666}.status{font-weight:bold;color:var(--green)}.out{color:var(--red);font-weight:bold}
+.hidden{display:none!important}.order,.cartline{border:1px solid #ddd;border-radius:8px;padding:10px;margin:8px 0}
+.step{display:inline-block;background:#e6f2e8;padding:5px 8px;border-radius:20px;margin:3px;font-size:12px}
+footer{text-align:center;padding:18px;color:#555}.stars button{background:#fff;color:#d18b00;font-size:23px;padding:3px}
+</style>
+</head>
+<body>
+<header><h1>🛒 MAHALA STORE</h1><div>आपका अपना किराना स्टोर</div></header>
+<nav>
+<button onclick="show('shop')">दुकान</button><button onclick="show('cartPanel')">Cart (<span id="cartCount">0</span>)</button>
+<button onclick="show('myOrders')">मेरे ऑर्डर</button><button onclick="show('help');renderHelp()">Help / सहायता</button><button onclick="show('customerChat');renderCustomerChat()">Admin Chat</button><button onclick="show('adminLogin')">Admin</button>
+</nav>
+<main>
+<section id="shop" class="panel">
+<h2>सामान / Products</h2><input id="search" placeholder="सामान खोजें..." oninput="renderProducts()">
+<div id="products" class="grid"></div>
+</section>
+
+<section id="cartPanel" class="panel hidden">
+<h2>मेरी टोकरी</h2><div id="cart"></div><h3 id="cartTotal">कुल: ₹0</h3>
+<h2>ऑर्डर विवरण</h2>
+<form id="checkout">
+<label>नाम</label><input id="custName" required>
+<label>मोबाइल नंबर (10 अंक)</label><input id="custMobile" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" required>
+<label>पूरा पता</label><textarea id="custAddress" required></textarea>
+<button type="button" class="gold" onclick="getLocation()">📍 मेरी मौजूदा लोकेशन शेयर करें</button><div id="locText" class="small">लोकेशन लेने के बाद यह ऑर्डर के साथ जुड़ेगी।</div>
+<label>डिलीवरी समय (अनुमानित)</label><select id="delivery"><option>30 मिनट (उपलब्धता के अनुसार)</option><option>1 घंटा (उपलब्धता के अनुसार)</option><option>2 घंटे (उपलब्धता के अनुसार)</option><option>आज ही (उपलब्धता के अनुसार)</option></select>
+<label>भुगतान</label><select id="payment"><option>Cash on Delivery</option><option>UPI (दुकानदार द्वारा भुगतान लिंक/QR देने पर)</option></select>
+<div id="upiBox" class="order hidden"><b>UPI से भुगतान करें</b><p id="upiText">दुकानदार का UPI ID</p><img id="upiQr" alt="UPI QR Code" style="width:220px;max-width:100%;background:white;padding:8px"><p class="small">QR स्कैन करके भुगतान करें। भुगतान की पुष्टि अपने UPI ऐप में जाँचें।</p></div><button type="submit">ऑर्डर भेजें</button>
+</form>
+<p class="small">यह डेमो ऑर्डर इसी डिवाइस/ब्राउज़र में सेव होता है। यह अभी दुकान तक ऑनलाइन ऑर्डर नहीं भेजता और UPI भुगतान नहीं लेता।</p>
+</section>
+
+<section id="myOrders" class="panel hidden"><h2>मेरे ऑर्डर</h2>
+<p class="small">अपने ऑर्डर देखने के लिए वही मोबाइल नंबर दर्ज करें जो ऑर्डर में दिया था।</p>
+<input id="lookupMobile" inputmode="numeric" maxlength="10" placeholder="मोबाइल नंबर">
+<button onclick="renderMyOrders()">ऑर्डर देखें</button><div id="customerOrders"></div>
+</section>
+
+<section id="help" class="panel hidden">
+<h2>❓ Help / सहायता केंद्र</h2>
+<h3>ऑर्डर कैसे करें?</h3><p>दुकान में सामान चुनें, Cart में मात्रा जाँचें, अपना नाम, मोबाइल नंबर और पूरा पता भरें। फिर ऑर्डर भेजें।</p>
+<h3>ऑर्डर की स्थिति कैसे देखें?</h3><p>मेरे ऑर्डर में वही मोबाइल नंबर डालें जो ऑर्डर करते समय दिया था।</p>
+<h3>ऑर्डर रद्द कैसे करें?</h3><p>मेरे ऑर्डर में उपलब्ध Cancel विकल्प दबाएँ और रद्द करने का कारण चुनें। रद्द करने का विकल्प केवल पात्र स्थिति में दिखेगा।</p>
+<h3>लोकेशन कैसे शेयर करें?</h3><p>ऑर्डर करते समय “मेरी मौजूदा लोकेशन शेयर करें” दबाएँ और फोन में Location अनुमति दें।</p>
+<h3>UPI भुगतान में मदद</h3><p>QR Code को UPI ऐप से स्कैन करें। भुगतान सफल हुआ या नहीं, अपने UPI ऐप में जाँचें। यह डेमो वास्तविक भुगतान की पुष्टि नहीं करता।</p>
+<h3>दुकान से संपर्क करें</h3><div id="helpContact" class="small">दुकान का संपर्क नंबर अभी Admin द्वारा नहीं जोड़ा गया है।</div>
+</section>
+
+<section id="customerChat" class="panel hidden">
+<h2>💬 Admin से Chat द्वारा सहायता</h2>
+<p>अपना नाम और मोबाइल नंबर डालकर दुकान के Admin को संदेश भेजें। जवाब देखने के लिए वही मोबाइल नंबर दोबारा डालें।</p>
+<label>आपका नाम</label><input id="chatName" placeholder="अपना नाम">
+<label>मोबाइल नंबर</label><input id="chatMobile" inputmode="numeric" maxlength="10" placeholder="10 अंकों का मोबाइल नंबर">
+<label>अपना संदेश / समस्या लिखें</label><textarea id="chatMessage" placeholder="आपको किस बात में सहायता चाहिए?"></textarea>
+<button type="button" onclick="sendCustomerChat()">संदेश भेजें</button>
+<hr><h3>📹 दुकान के मालिक से Video Call</h3>
+<p>वीडियो कॉल लिंक बनाएँ और WhatsApp से दुकानदार को भेजें। दुकानदार उसी लिंक पर टैप करके कॉल में जुड़ सकता है।</p>
+<button type="button" class="gold" onclick="createStoreVideoCall()">📹 वीडियो कॉल शुरू करें</button>
+<div id="videoCallBox" class="small"></div>
+<p class="small">कॉल के लिए इंटरनेट, कैमरा और माइक्रोफोन की अनुमति जरूरी है। यह सुविधा Jitsi Meet सेवा के जरिए खुलेगी।</p>
+<hr><h3>Admin का जवाब देखें</h3><button type="button" class="gold" onclick="renderCustomerChat()">जवाब Refresh करें</button>
+<div id="customerChatMessages"></div>
+<p class="small">नोट: यह अभी डेमो चैट है। संदेश इसी मोबाइल के ब्राउज़र में सेव होते हैं; Admin को दूसरे फोन पर ऑनलाइन नहीं मिलेंगे।</p>
+</section>
+
+<section id="adminLogin" class="panel hidden"><h2>Admin Login</h2>
+<p class="small">डेमो लॉगिन: यूज़रनेम <b>admin</b>, पासवर्ड <b>Mahala@123</b>. असली ऐप में इसे सुरक्षित सर्वर लॉगिन से बदलना जरूरी है।</p>
+<input id="adminUser" placeholder="यूज़रनेम"><input id="adminPass" type="password" placeholder="पासवर्ड">
+<button onclick="adminLogin()">Login</button><div id="loginMsg" class="small"></div>
+</section>
+
+<section id="admin" class="panel hidden"><div class="row"><h2>Admin Panel</h2><button class="red" onclick="adminLogout()">Logout</button></div>
+<h3>🔐 Admin Password बदलें</h3>
+<label>पुराना पासवर्ड</label><input id="oldAdminPass" type="password" autocomplete="current-password" placeholder="पुराना पासवर्ड">
+<label>नया पासवर्ड</label><input id="newAdminPass" type="password" autocomplete="new-password" minlength="8" placeholder="कम से कम 8 अक्षर">
+<label>नया पासवर्ड दोबारा लिखें</label><input id="confirmAdminPass" type="password" autocomplete="new-password" minlength="8" placeholder="नया पासवर्ड दोबारा लिखें">
+<button type="button" class="gold" onclick="changeAdminPassword()">पासवर्ड बदलें</button><p class="small">पासवर्ड बदलने के बाद अगली बार नए पासवर्ड से Login करें।</p><hr>
+<h3>☎️ Help / सहायता संपर्क</h3><label>दुकान का WhatsApp नंबर (देश कोड सहित, जैसे 91XXXXXXXXXX)</label><input id="helpPhoneInput" inputmode="numeric" maxlength="12" placeholder="91XXXXXXXXXX"><button type="button" class="gold" onclick="saveHelpPhone()">संपर्क नंबर सेव करें</button><p class="small">ग्राहक Help सेक्शन से इस नंबर पर WhatsApp संदेश भेज सकेगा।</p><hr>
+<h3>UPI QR Code सेटिंग</h3><label>अपना UPI ID बदलें</label><input id="upiIdInput" placeholder="जैसे yourname@okaxis"><button type="button" class="gold" onclick="saveUpiId()">UPI ID सेव करें</button><p class="small">बाद में इसी जगह से UPI ID बदल सकते हैं।</p><h3>नया सामान जोड़ें / सामान बदलें</h3>
+<form id="productForm">
+<input type="hidden" id="editId">
+<label>सामान का नाम</label><input id="pName" required>
+<div class="row"><div><label>कीमत (₹)</label><input id="pPrice" type="number" min="0" step="0.01" required></div><div><label>इकाई</label><select id="pUnit"><option>kg</option><option>gram</option><option>litre</option><option>piece</option><option>packet</option></select></div></div>
+<label>स्टॉक मात्रा</label><input id="pStock" type="number" min="0" step="1" required>
+<label>फोटो (Gallery या Camera)</label><input id="pImage" type="file" accept="image/*" capture="environment">
+<div id="imagePreview" class="small"></div>
+<button type="submit">Save Product</button><button type="button" class="gold" onclick="resetProductForm()">नया सामान</button>
+</form>
+<h3>सभी सामान</h3><div id="adminProducts"></div>
+<h3>ग्राहकों के ऑर्डर</h3><div id="adminOrders"></div>
+<h3>⭐ ग्राहकों के Reviews / Ratings</h3><div id="adminReviews"></div>
+<h3>💬 ग्राहकों के संदेश / Admin Chat</h3><div id="adminChats"></div>
+</section>
+</main>
+<footer>MAHALA STORE © 2026</footer>
+
+<script>
+const KEY='mahala_demo_products_v2', ORD='mahala_demo_orders_v2', UPIKEY='mahala_demo_upi_id';
+function getUpiId(){return localStorage.getItem(UPIKEY)||'yourname@okaxis'}
+function saveUpiId(){if(!adminOn)return;let v=document.getElementById('upiIdInput').value.trim();if(!/^[\w.\-]{2,256}@[\w]{2,64}$/.test(v))return alert('सही UPI ID लिखें, जैसे name@okaxis');localStorage.setItem(UPIKEY,v);alert('UPI ID सेव हो गई');renderAdmin();updateUpiQr() }
+function updateUpiQr(){let box=document.getElementById('upiBox');if(!box)return;let isUpi=document.getElementById('payment').value.startsWith('UPI');box.classList.toggle('hidden',!isUpi);if(!isUpi)return;let total=cart.reduce((sum,c)=>{let p=products().find(x=>x.id===c.id);return sum+(p?p.price*c.qty:0)},0);let id=getUpiId();document.getElementById('upiText').textContent='UPI ID: '+id+' | राशि: '+money(total);let payload='upi://pay?pa='+encodeURIComponent(id)+'&pn='+encodeURIComponent('MAHALA STORE')+'&am='+total.toFixed(2)+'&cu=INR';document.getElementById('upiQr').src='https://api.qrserver.com/v1/create-qr-code/?size=240x240&data='+encodeURIComponent(payload)}
+document.addEventListener('DOMContentLoaded',()=>{document.getElementById('payment').addEventListener('change',updateUpiQr)});
+let cart=[], adminOn=false, pendingImage='';
+const starter=[
+{id:'p1',name:'चावल',price:60,unit:'kg',stock:30,image:''},
+{id:'p2',name:'तेल',price:150,unit:'litre',stock:20,image:''},
+{id:'p3',name:'चीनी',price:45,unit:'kg',stock:25,image:''},
+{id:'p4',name:'दाल',price:120,unit:'kg',stock:20,image:''}
+];
+function products(){let x=JSON.parse(localStorage.getItem(KEY)||'null');if(!x){x=starter;localStorage.setItem(KEY,JSON.stringify(x))}return x}
+function saveProducts(x){localStorage.setItem(KEY,JSON.stringify(x))}
+function orders(){return JSON.parse(localStorage.getItem(ORD)||'[]')}
+function saveOrders(x){localStorage.setItem(ORD,JSON.stringify(x))}
+function money(n){return '₹'+Number(n).toFixed(2).replace(/\.00$/,'')}
+function show(id){document.querySelectorAll('main>section').forEach(s=>s.classList.add('hidden'));document.getElementById(id).classList.remove('hidden');if(id==='shop')renderProducts();if(id==='cartPanel')renderCart();if(id==='admin'&&adminOn)renderAdmin()}
+function renderProducts(){let q=(document.getElementById('search')?.value||'').toLowerCase();document.getElementById('products').innerHTML=products().filter(p=>p.name.toLowerCase().includes(q)).map(p=>`<div class="product"><img src="${p.image||'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22120%22 height=%22100%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23eef7ef%22/%3E%3Ctext x=%2250%25%22 y=%2255%25%22 text-anchor=%22middle%22 font-size=%2230%22%3E🛍️%3C/text%3E%3C/svg%3E'}" alt=""><b>${esc(p.name)}</b><p>${money(p.price)} / ${esc(p.unit)}</p><p>${p.stock>0?`स्टॉक: ${p.stock}`:'<span class="out">Out of Stock</span>'}</p><button ${p.stock<=0?'disabled':''} onclick="addCart('${p.id}')">Add to Cart</button></div>`).join('')||'कोई सामान नहीं मिला'}
+function addCart(id){let p=products().find(x=>x.id===id);let c=cart.find(x=>x.id===id);if(!p||p.stock<=0)return alert('स्टॉक उपलब्ध नहीं है');if(c&&c.qty>=p.stock)return alert('उपलब्ध स्टॉक से अधिक मात्रा नहीं जोड़ सकते');if(c)c.qty++;else cart.push({id,qty:1});renderCart();document.getElementById('cartCount').textContent=cart.reduce((a,x)=>a+x.qty,0)}
+function changeQty(id,d){let p=products().find(x=>x.id===id),c=cart.find(x=>x.id===id);if(!c)return;c.qty+=d;if(c.qty<=0)cart=cart.filter(x=>x.id!==id);else if(c.qty>p.stock){c.qty=p.stock;alert('स्टॉक से अधिक मात्रा उपलब्ध नहीं है')}renderCart();document.getElementById('cartCount').textContent=cart.reduce((a,x)=>a+x.qty,0)}
+function renderCart(){let ps=products(),total=0;document.getElementById('cart').innerHTML=cart.map(c=>{let p=ps.find(x=>x.id===c.id);if(!p)return '';let sub=p.price*c.qty;total+=sub;return `<div class="cartline"><b>${esc(p.name)}</b> — ${money(p.price)} × ${c.qty} = ${money(sub)}<div><button onclick="changeQty('${p.id}',-1)">−</button><button onclick="changeQty('${p.id}',1)">+</button><button class="red" onclick="cart=cart.filter(x=>x.id!=='${p.id}');renderCart()">हटाएँ</button></div></div>`}).join('')||'Cart खाली है';document.getElementById('cartTotal').textContent='कुल: '+money(total);updateUpiQr()}
+document.getElementById('checkout').addEventListener('submit',e=>{e.preventDefault();if(!cart.length)return alert('पहले सामान Cart में जोड़ें');let ps=products(),items=[],total=0;for(let c of cart){let p=ps.find(x=>x.id===c.id);if(!p||p.stock<c.qty)return alert('किसी सामान का स्टॉक बदल गया है। Cart जाँचें।');items.push({id:p.id,name:p.name,price:p.price,unit:p.unit,qty:c.qty});total+=p.price*c.qty}let mobile=document.getElementById('custMobile').value;if(!/^\d{10}$/.test(mobile))return alert('10 अंकों का मोबाइल नंबर लिखें');let o={id:Date.now(),name:document.getElementById('custName').value.trim(),mobile,address:document.getElementById('custAddress').value.trim(),location:window.mahalaLocation||'',delivery:document.getElementById('delivery').value,payment:document.getElementById('payment').value,upiId:getUpiId(),items,total,status:'Order Received',reason:'',date:new Date().toLocaleString('hi-IN')};let os=orders();os.push(o);saveOrders(os);cart.forEach(c=>{let p=ps.find(x=>x.id===c.id);p.stock-=c.qty});saveProducts(ps);cart=[];renderCart();renderProducts();e.target.reset();window.mahalaLocation='';document.getElementById('locText').textContent='लोकेशन लेने के बाद यह ऑर्डर के साथ जुड़ेगी।';alert('डेमो ऑर्डर सेव हो गया। ऑर्डर नंबर: '+o.id);show('myOrders');document.getElementById('lookupMobile').value=mobile;renderMyOrders()});
+function getLocation(){if(!navigator.geolocation)return alert('इस ब्राउज़र में लोकेशन उपलब्ध नहीं');document.getElementById('locText').textContent='लोकेशन प्राप्त की जा रही है...';navigator.geolocation.getCurrentPosition(pos=>{window.mahalaLocation=pos.coords.latitude+','+pos.coords.longitude;document.getElementById('locText').innerHTML='✅ लोकेशन जुड़ गई। <a target="_blank" rel="noopener" href="https://www.google.com/maps?q='+encodeURIComponent(window.mahalaLocation)+'">मैप पर देखें</a>'},()=>{document.getElementById('locText').textContent='लोकेशन अनुमति नहीं मिली। कृपया फोन की Location चालू करें और Browser को अनुमति दें; आप पता हाथ से भी लिख सकते हैं।'},{enableHighAccuracy:true,timeout:15000,maximumAge:0})}
+function renderMyOrders(){let m=document.getElementById('lookupMobile').value.trim();let list=orders().filter(o=>o.mobile===m);document.getElementById('customerOrders').innerHTML=list.map(o=>`<div class="order"><b>ऑर्डर #${o.id}</b><p>${o.date}</p><p>${o.items.map(i=>esc(i.name)+' × '+i.qty).join(', ')}</p><p>कुल: ${money(o.total)} | ${esc(o.payment)}</p><p class="status">${esc(o.status)}</p>${o.reason?'<p>रद्द करने का कारण: '+esc(o.reason)+'</p>':''}<div>${['Order Received','Accepted','Packing','Out for Delivery','Delivered'].map(s=>`<span class="step">${s===o.status?'● ':''}${s}</span>`).join('')}</div>${o.status==='Order Received'?`<button class="red" onclick="cancelOrder(${o.id})">Cancel Order</button>`:''}<div>${o.status==='Delivered'?`<label>Rating (1–5)</label><select id="rate${o.id}"><option value="">रेटिंग चुनें</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select><textarea id="review${o.id}" placeholder="Review लिखें"></textarea><button onclick="saveReview(${o.id})">Review भेजें</button>`:''}<button class="gold" onclick="reorder(${o.id})">Reorder</button></div>${o.review?'<p>आपकी रेटिंग: '+o.review.rating+'/5 — '+esc(o.review.text)+'</p>':''}</div>`).join('')||'<p>इस मोबाइल नंबर से कोई ऑर्डर नहीं मिला।</p>'}
+function cancelOrder(id){let os=orders(),o=os.find(x=>x.id===id);if(!o||o.status!=='Order Received')return alert('इस स्थिति में ऑर्डर रद्द नहीं किया जा सकता');let choice=prompt('रद्द करने का कारण चुनें:\n1. गलती से ऑर्डर हो गया\n2. सामान की जरूरत नहीं है\n3. डिलीवरी में देरी हो रही है\n4. गलत सामान ऑर्डर हो गया\n5. अन्य कारण');let reasons={'1':'गलती से ऑर्डर हो गया','2':'सामान की जरूरत नहीं है','3':'डिलीवरी में देरी हो रही है','4':'गलत सामान ऑर्डर हो गया'};if(choice===null)return;if(choice==='5'){let t=prompt('अपना कारण लिखें (अनिवार्य)');if(!t||!t.trim())return alert('कारण लिखना जरूरी है');o.reason='अन्य: '+t.trim()}else if(reasons[choice])o.reason=reasons[choice];else return alert('1 से 5 में सही विकल्प चुनें');o.status='Cancelled';o.items.forEach(i=>{let p=products().find(x=>x.id===i.id);if(p)p.stock+=i.qty});saveProducts(products());saveOrders(os);renderMyOrders();renderProducts()}
+function reorder(id){let o=orders().find(x=>x.id===id);if(!o)return;for(let i of o.items){let p=products().find(x=>x.id===i.id);if(p&&p.stock>0){let c=cart.find(x=>x.id===i.id);let q=Math.min(i.qty,p.stock-(c?c.qty:0));if(q>0){if(c)c.qty+=q;else cart.push({id:i.id,qty:q})}}}renderCart();alert('उपलब्ध सामान Cart में जोड़ दिया गया');show('cartPanel')}
+function saveReview(id){let os=orders(),o=os.find(x=>x.id===id),r=document.getElementById('rate'+id).value,t=document.getElementById('review'+id).value.trim();if(!r)return alert('रेटिंग चुनें');o.review={rating:r,text:t};saveOrders(os);renderMyOrders();alert('धन्यवाद! Review सेव हुआ')}
+function getAdminPassword(){return localStorage.getItem('mahala_admin_password')||'Mahala@123'}
+function adminLogin(){if(document.getElementById('adminUser').value==='admin'&&document.getElementById('adminPass').value===getAdminPassword()){adminOn=true;document.getElementById('loginMsg').textContent='';document.getElementById('adminPass').value='';show('admin');renderAdmin()}else document.getElementById('loginMsg').textContent='गलत यूज़रनेम या पासवर्ड'}
+function changeAdminPassword(){if(!adminOn)return;let old=document.getElementById('oldAdminPass').value,n=document.getElementById('newAdminPass').value,c=document.getElementById('confirmAdminPass').value;if(old!==getAdminPassword())return alert('पुराना पासवर्ड सही नहीं है');if(n.length<8)return alert('नया पासवर्ड कम से कम 8 अक्षर का रखें');if(n!==c)return alert('दोनों नए पासवर्ड एक जैसे नहीं हैं');if(n===old)return alert('नया पासवर्ड पुराने पासवर्ड से अलग रखें');localStorage.setItem('mahala_admin_password',n);document.getElementById('oldAdminPass').value='';document.getElementById('newAdminPass').value='';document.getElementById('confirmAdminPass').value='';alert('Admin पासवर्ड बदल गया। अगली बार नए पासवर्ड से Login करें।')}
+function adminLogout(){adminOn=false;show('shop')}
+document.getElementById('pImage').addEventListener('change',e=>{let f=e.target.files[0];if(!f)return;let reader=new FileReader();reader.onload=()=>{pendingImage=reader.result;document.getElementById('imagePreview').textContent='फोटो चुनी गई'};reader.readAsDataURL(f)});
+document.getElementById('productForm').addEventListener('submit',e=>{e.preventDefault();if(!adminOn)return;let ps=products(),id=document.getElementById('editId').value,old=ps.find(p=>p.id===id),p={id:id||'p'+Date.now(),name:document.getElementById('pName').value.trim(),price:Number(document.getElementById('pPrice').value),unit:document.getElementById('pUnit').value,stock:Number(document.getElementById('pStock').value),image:pendingImage||(old?old.image:'')};if(!p.name||p.price<0||p.stock<0)return alert('सही जानकारी भरें');if(old)ps=ps.map(x=>x.id===id?p:x);else ps.push(p);saveProducts(ps);resetProductForm();renderAdmin();renderProducts();alert('सामान सेव हो गया')});
+function resetProductForm(){document.getElementById('productForm').reset();document.getElementById('editId').value='';pendingImage='';document.getElementById('imagePreview').textContent=''}
+function editProduct(id){let p=products().find(x=>x.id===id);if(!p)return;document.getElementById('editId').value=p.id;document.getElementById('pName').value=p.name;document.getElementById('pPrice').value=p.price;document.getElementById('pUnit').value=p.unit;document.getElementById('pStock').value=p.stock;pendingImage=p.image;document.getElementById('imagePreview').textContent=p.image?'मौजूदा फोटो सुरक्षित है':'';window.scrollTo(0,0)}
+function deleteProduct(id){if(!confirm('क्या यह सामान हटाना है?'))return;saveProducts(products().filter(p=>p.id!==id));renderAdmin();renderProducts()}
+function setStatus(id,status){let os=orders(),o=os.find(x=>x.id===id);if(!o)return;o.status=status;saveOrders(os);renderAdmin()}
+const CHATKEY='mahala_store_demo_chats_v1';
+function getChats(){try{return JSON.parse(localStorage.getItem(CHATKEY)||'[]')}catch(e){return []}}
+function saveChats(a){localStorage.setItem(CHATKEY,JSON.stringify(a))}
+function sendCustomerChat(){let name=document.getElementById('chatName').value.trim(),mobile=document.getElementById('chatMobile').value.trim(),message=document.getElementById('chatMessage').value.trim();if(!name||!/^[0-9]{10}$/.test(mobile)||!message)return alert('नाम, सही 10 अंकों का मोबाइल नंबर और संदेश भरें');let a=getChats();a.push({id:Date.now(),name,mobile,message,from:'customer',time:new Date().toLocaleString('hi-IN')});saveChats(a);document.getElementById('chatMessage').value='';renderCustomerChat();alert('आपका संदेश डेमो में सेव हो गया।')}
+function renderCustomerChat(){let mobile=document.getElementById('chatMobile').value.trim(),box=document.getElementById('customerChatMessages');if(!box)return;if(!/^[0-9]{10}$/.test(mobile)){box.innerHTML='<p class="small">जवाब देखने के लिए ऊपर अपना 10 अंकों का मोबाइल नंबर डालें।</p>';return}let a=getChats().filter(x=>x.mobile===mobile);box.innerHTML=a.length?a.map(x=>`<div class="order"><b>${x.from==='customer'?'आपका संदेश':'Admin का जवाब'}</b><p>${esc(x.message)}</p><span class="small">${esc(x.time||'')}</span></div>`).join(''):'<p>अभी कोई संदेश या जवाब नहीं है।'}
+function createStoreVideoCall(){
+ let name=document.getElementById('chatName').value.trim();
+ let mobile=document.getElementById('chatMobile').value.trim();
+ if(!name||!/^[0-9]{10}$/.test(mobile))return alert('पहले अपना नाम और 10 अंकों का मोबाइल नंबर भरें।');
+ let room='MAHALASTORE-'+Date.now()+'-'+Math.random().toString(36).slice(2,8);
+ let callUrl='https://meet.jit.si/'+room;
+ let message='Namaste, MAHALA STORE se video call ke liye is link par join karein: '+callUrl+' (Customer: '+name+', Mobile: '+mobile+')';
+ let phone=getHelpPhone();
+ let box=document.getElementById('videoCallBox');
+ box.innerHTML='<p>आपका वीडियो कॉल लिंक तैयार है। इसे दुकानदार को WhatsApp पर भेजें:</p><p><a href="'+callUrl+'" target="_blank" rel="noopener">वीडियो कॉल में जुड़ें</a></p><button type="button" onclick="copyVideoCallLink(\''+callUrl+'\')">लिंक कॉपी करें</button> '+(phone?'<a class="btn" target="_blank" rel="noopener" href="https://wa.me/'+phone+'?text='+encodeURIComponent(message)+'">WhatsApp पर दुकानदार को लिंक भेजें</a>':'<p class="small">Admin Panel में पहले दुकान का WhatsApp नंबर देश कोड सहित सेव करें।</p>');
+}
+function copyVideoCallLink(url){if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(url).then(()=>alert('वीडियो कॉल लिंक कॉपी हो गया।')).catch(()=>prompt('इस लिंक को कॉपी करें:',url));}else{prompt('इस लिंक को कॉपी करें:',url)}}
+function replyToChat(id){if(!adminOn)return;let input=document.getElementById('reply'+id),message=input.value.trim();if(!message)return alert('जवाब लिखें');let a=getChats(),x=a.find(v=>v.id===id);if(!x)return;a.push({id:Date.now(),name:'Admin',mobile:x.mobile,message,from:'admin',time:new Date().toLocaleString('hi-IN')});saveChats(a);renderAdmin();alert('जवाब डेमो में सेव हो गया।')}
+function renderAdminChats(){let el=document.getElementById('adminChats');if(!el)return;let a=getChats();el.innerHTML=a.length?a.map(x=>`<div class="order"><b>${esc(x.name)} — ${esc(x.mobile)}</b><p>${x.from==='customer'?'ग्राहक':'Admin'}: ${esc(x.message)}</p><span class="small">${esc(x.time||'')}</span>${x.from==='customer'?`<textarea id="reply${x.id}" placeholder="अपना जवाब लिखें"></textarea><button onclick="replyToChat(${x.id})">जवाब भेजें</button>`:''}</div>`).join(''):'अभी कोई ग्राहक संदेश नहीं है।'}
+function getHelpPhone(){return localStorage.getItem('mahala_help_phone')||''}
+function saveHelpPhone(){if(!adminOn)return;let n=document.getElementById('helpPhoneInput').value.replace(/\\D/g,'');if(n.length<10||n.length>12)return alert('सही मोबाइल नंबर देश कोड सहित डालें');localStorage.setItem('mahala_help_phone',n);renderHelp();alert('Help संपर्क नंबर सेव हो गया')}
+function renderHelp(){let n=getHelpPhone(),el=document.getElementById('helpContact');if(!el)return;el.innerHTML=n?'WhatsApp सहायता: <a target="_blank" rel="noopener" href="https://wa.me/'+n+'">WhatsApp पर संपर्क करें</a>':'दुकान का संपर्क नंबर अभी Admin द्वारा नहीं जोड़ा गया है।'}
+function renderAdminReviews(){let el=document.getElementById('adminReviews');if(!el)return;let reviewed=orders().filter(o=>o.review);el.innerHTML=reviewed.length?reviewed.map(o=>`<div class="order"><b>⭐ ${esc(o.review.rating)}/5 — ${esc(o.name)}</b><p>ऑर्डर #${o.id} | मोबाइल: ${esc(o.mobile)}</p><p>${esc(o.review.text||'ग्राहक ने केवल रेटिंग दी है।')}</p></div>`).join(''):'<p>अभी कोई ग्राहक Review नहीं मिला है। ग्राहक के Delivered ऑर्डर के बाद Review भेजने पर यहाँ दिखाई देगा।</p>'}
+function renderAdmin(){if(!adminOn)return;document.getElementById('upiIdInput').value=getUpiId();document.getElementById('helpPhoneInput').value=getHelpPhone();document.getElementById('adminProducts').innerHTML=products().map(p=>`<div class="order"><b>${esc(p.name)}</b> — ${money(p.price)}/${esc(p.unit)} — स्टॉक ${p.stock}<button onclick="editProduct('${p.id}')">Edit</button><button class="red" onclick="deleteProduct('${p.id}')">Delete</button></div>`).join('');document.getElementById('adminOrders').innerHTML=orders().map(o=>`<div class="order"><b>#${o.id} — ${esc(o.name)}</b><p>${esc(o.mobile)} | ${esc(o.address)}</p>${o.location?`<p>📍 ग्राहक की लोकेशन: <a target="_blank" rel="noopener" href="https://www.google.com/maps?q=${encodeURIComponent(o.location)}">Google Maps में रास्ता देखें</a></p>`:'<p>📍 लोकेशन शेयर नहीं की गई</p>'}<p>${o.items.map(i=>esc(i.name)+' × '+i.qty).join(', ')} | ${money(o.total)}</p><p>भुगतान: ${esc(o.payment)}${o.payment.startsWith('UPI')?' | UPI ID: '+esc(o.upiId||getUpiId()):''} | स्थिति: <b>${esc(o.status)}</b></p><p>रद्द कारण: ${esc(o.reason||'—')}</p><select id="st${o.id}"><option>Order Received</option><option>Accepted</option><option>Packing</option><option>Out for Delivery</option><option>Delivered</option><option>Cancelled</option></select><button onclick="setStatus(${o.id},document.getElementById('st${o.id}').value)">Status Update</button></div>`).join('')||'अभी कोई ऑर्डर नहीं';renderAdminReviews();renderAdminChats();}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+renderProducts();renderCart();
+</script>
+</body>
+</html>
